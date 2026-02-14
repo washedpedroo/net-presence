@@ -1,0 +1,256 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN       // AD - Amministratore
+  GP          // GP - Gestore Presenze
+  DIPENDENTE  // Dipendente
+}
+
+enum StatoGiustificativo {
+  PENDING
+  APPROVATO
+  RIFIUTATO
+}
+
+enum TipoGiustificativo {
+  FERIE
+  PERMESSO
+  EX_FESTIVITA
+  MALATTIA
+}
+
+enum StatoTimbrature {
+  BOZZA
+  CONFERMATO_GP
+  INVIATO_AD
+  APPROVATO
+  RIGETTATO
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String
+  nome          String
+  cognome       String
+  ruolo         UserRole
+  attivo        Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  employee      Employee?
+  auditLogs     AuditLog[]
+  
+  @@index([email])
+  @@map("users")
+}
+
+model Employee {
+  id                String    @id @default(cuid())
+  userId            String    @unique
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  codiceFiscale     String    @unique
+  dataNascita       DateTime
+  luogoNascita      String
+  indirizzo         String
+  citta             String
+  cap               String
+  telefono          String?
+  dataAssunzione    DateTime
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  template          EmployeeTemplate?
+  timbrature        Timbratura[]
+  giustificativi    Giustificativo[]
+  
+  @@index([userId])
+  @@map("employees")
+}
+
+model EmployeeTemplate {
+  id          String    @id @default(cuid())
+  employeeId  String    @unique
+  employee    Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  
+  // Orari standard settimanali
+  lunediInizio      String?   // formato "HH:MM"
+  lunediFine        String?
+  martediInizio     String?
+  martediFine       String?
+  mercolediInizio   String?
+  mercolediFine     String?
+  giovediInizio     String?
+  giovediFine       String?
+  venerdiInizio     String?
+  venerdiFine       String?
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  @@map("employee_templates")
+}
+
+model Timbratura {
+  id          String    @id @default(cuid())
+  employeeId  String
+  employee    Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  
+  data        DateTime  // data della timbratura
+  anno        Int
+  mese        Int       // 1-12
+  
+  // 4 slot di timbratura
+  entrata1    String?   // formato "HH:MM"
+  uscita1     String?
+  entrata2    String?
+  uscita2     String?
+  
+  oreLavorate Float     @default(0)
+  straordinari Float    @default(0)
+  note        String?
+  
+  stato       StatoTimbrature @default(BOZZA)
+  confermatoGpAt    DateTime?
+  inviatoAdAt       DateTime?
+  approvatoAt       DateTime?
+  rigettatoAt       DateTime?
+  motivazioneRigetto String?
+  
+  versione    Int       @default(1)
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  createdBy   String?
+  updatedBy   String?
+  
+  versions    TimbraturaVersion[]
+  
+  @@unique([employeeId, data])
+  @@index([employeeId, anno, mese])
+  @@index([stato])
+  @@map("timbrature")
+}
+
+model TimbraturaVersion {
+  id            String    @id @default(cuid())
+  timbraturaId  String
+  timbratura    Timbratura @relation(fields: [timbraturaId], references: [id], onDelete: Cascade)
+  
+  versione      Int
+  entrata1      String?
+  uscita1       String?
+  entrata2      String?
+  uscita2       String?
+  oreLavorate   Float
+  straordinari  Float
+  note          String?
+  
+  modificatoDa  String
+  modificatoAt  DateTime  @default(now())
+  
+  @@index([timbraturaId])
+  @@map("timbratura_versions")
+}
+
+model Giustificativo {
+  id          String    @id @default(cuid())
+  employeeId  String
+  employee    Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  
+  tipo        TipoGiustificativo
+  dataInizio  DateTime
+  dataFine    DateTime?  // per ferie può essere diverso da dataInizio
+  oraInizio   String?    // per permessi "HH:MM"
+  oraFine     String?    // per permessi "HH:MM"
+  
+  oreTotali   Float      @default(0)
+  descrizione String?
+  
+  stato       StatoGiustificativo @default(PENDING)
+  
+  richiestoAt   DateTime  @default(now())
+  approvatoAt   DateTime?
+  rigettatoAt   DateTime?
+  approvatoDa   String?   // userId dell'AD
+  motivazioneRigetto String?
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  timeline    GiustificativoTimeline[]
+  
+  @@index([employeeId, stato])
+  @@index([stato])
+  @@map("giustificativi")
+}
+
+model GiustificativoTimeline {
+  id                String    @id @default(cuid())
+  giustificativoId  String
+  giustificativo    Giustificativo @relation(fields: [giustificativoId], references: [id], onDelete: Cascade)
+  
+  stato       StatoGiustificativo
+  nota        String?
+  userId      String    // chi ha fatto l'azione
+  createdAt   DateTime  @default(now())
+  
+  @@index([giustificativoId])
+  @@map("giustificativo_timeline")
+}
+
+model Festivita {
+  id          String    @id @default(cuid())
+  data        DateTime  @unique
+  nome        String
+  nazionale   Boolean   @default(true)
+  regione     String?   // se è regionale
+  
+  createdAt   DateTime  @default(now())
+  
+  @@index([data])
+  @@map("festivita")
+}
+
+model Configuration {
+  id          String    @id @default(cuid())
+  chiave      String    @unique
+  valore      String
+  descrizione String?
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  @@map("configurations")
+}
+
+model AuditLog {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  azione      String    // es: "LOGIN", "CREATE_TIMBRATURA", "APPROVE_GIUSTIFICATIVO"
+  entita      String?   // es: "Timbratura", "Giustificativo"
+  entitaId    String?
+  dettagli    String?   // JSON con dettagli aggiuntivi
+  ipAddress   String?
+  userAgent   String?
+  
+  createdAt   DateTime  @default(now())
+  
+  @@index([userId, createdAt])
+  @@index([azione])
+  @@map("audit_logs")
+}
