@@ -8,7 +8,6 @@ import { Loader2 } from "lucide-react";
 
 interface Employee {
   id: string;
-  codiceFiscale: string;
   dataNascita: string;
   dataAssunzione: string;
   user: {
@@ -120,7 +119,6 @@ export default function EmployeesPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Dipendente</TableHead>
-                <TableHead>Codice Fiscale</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Data Assunzione</TableHead>
                 <TableHead>Template</TableHead>
@@ -132,9 +130,6 @@ export default function EmployeesPage() {
                 <TableRow key={employee.id}>
                   <TableCell className="font-medium">
                     {employee.user.nome} {employee.user.cognome}
-                  </TableCell>
-                  <TableCell className="font-mono text-sm">
-                    {employee.codiceFiscale}
                   </TableCell>
                   <TableCell>{employee.user.email}</TableCell>
                   <TableCell>
@@ -158,7 +153,7 @@ export default function EmployeesPage() {
               ))}
               {employees.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-gray-500">
+                  <TableCell colSpan={5} className="text-center text-gray-500">
                     Nessun dipendente trovato
                   </TableCell>
                 </TableRow>

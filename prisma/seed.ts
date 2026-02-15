@@ -22,6 +22,22 @@ async function main() {
   });
   console.log('✅ Creato utente ADMIN:', admin.email);
 
+  // Crea utente AD (Amministratore Delegato)
+  const adPasswordHash = await bcrypt.hash('AdPassword123!', 12);
+  const ad = await prisma.user.upsert({
+    where: { email: 'ad@presenze.it' },
+    update: {},
+    create: {
+      email: 'ad@presenze.it',
+      passwordHash: adPasswordHash,
+      nome: 'Stefano',
+      cognome: 'Ferrari',
+      ruolo: 'AD',
+      attivo: true,
+    },
+  });
+  console.log('✅ Creato utente AD:', ad.email);
+
   // Crea utente GP
   const gpPasswordHash = await bcrypt.hash('GpPassword123!', 12);
   const gp = await prisma.user.upsert({
@@ -60,7 +76,6 @@ async function main() {
     update: {},
     create: {
       userId: dipendente.id,
-      codiceFiscale: 'VRDGNN80A01H501Z',
       dataNascita: new Date('1980-01-01'),
       luogoNascita: 'Roma',
       indirizzo: 'Via Roma 1',
@@ -72,25 +87,35 @@ async function main() {
   });
   console.log('✅ Creato employee per:', dipendente.email);
 
-  // Crea template orari per il dipendente
+  // Crea template orari per il dipendente (4 slot per giorno)
   await prisma.employeeTemplate.upsert({
     where: { employeeId: employee.id },
     update: {},
     create: {
       employeeId: employee.id,
-      lunediInizio: '09:00',
-      lunediFine: '18:00',
-      martediInizio: '09:00',
-      martediFine: '18:00',
-      mercolediInizio: '09:00',
-      mercolediFine: '18:00',
-      giovediInizio: '09:00',
-      giovediFine: '18:00',
-      venerdiInizio: '09:00',
-      venerdiFine: '18:00',
+      lunediEntrata1: '08:00',
+      lunediUscita1: '12:00',
+      lunediEntrata2: '13:00',
+      lunediUscita2: '17:00',
+      martediEntrata1: '08:00',
+      martediUscita1: '12:00',
+      martediEntrata2: '13:00',
+      martediUscita2: '17:00',
+      mercolediEntrata1: '08:00',
+      mercolediUscita1: '12:00',
+      mercolediEntrata2: '13:00',
+      mercolediUscita2: '17:00',
+      giovediEntrata1: '08:00',
+      giovediUscita1: '12:00',
+      giovediEntrata2: '13:00',
+      giovediUscita2: '17:00',
+      venerdiEntrata1: '08:00',
+      venerdiUscita1: '12:00',
+      venerdiEntrata2: '13:00',
+      venerdiUscita2: '17:00',
     },
   });
-  console.log('✅ Creato template orari per:', dipendente.email);
+  console.log('✅ Creato template orari (4 slot) per:', dipendente.email);
 
   // Crea configurazioni di sistema
   await prisma.configuration.upsert({
@@ -112,6 +137,16 @@ async function main() {
       descrizione: 'Tolleranza in minuti per straordinari',
     },
   });
+
+  await prisma.configuration.upsert({
+    where: { chiave: 'SESSION_TIMEOUT_ORE' },
+    update: {},
+    create: {
+      chiave: 'SESSION_TIMEOUT_ORE',
+      valore: '8',
+      descrizione: 'Durata massima sessioni utente in ore',
+    },
+  });
   console.log('✅ Create configurazioni di sistema');
 
   // Crea festività italiane 2026
@@ -119,7 +154,7 @@ async function main() {
     { data: new Date('2026-01-01'), nome: 'Capodanno' },
     { data: new Date('2026-01-06'), nome: 'Epifania' },
     { data: new Date('2026-04-05'), nome: 'Pasqua' },
-    { data: new Date('2026-04-06'), nome: 'Lunedì dell\'Angelo' },
+    { data: new Date('2026-04-06'), nome: "Lunedì dell'Angelo" },
     { data: new Date('2026-04-25'), nome: 'Festa della Liberazione' },
     { data: new Date('2026-05-01'), nome: 'Festa del Lavoro' },
     { data: new Date('2026-06-02'), nome: 'Festa della Repubblica' },
@@ -144,9 +179,13 @@ async function main() {
   console.log('');
   console.log('Credenziali di accesso:');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('ADMIN:');
+  console.log('ADMIN (sistema):');
   console.log('  Email: admin@presenze.it');
   console.log('  Password: AdminPassword123!');
+  console.log('');
+  console.log('AD (Amministratore Delegato):');
+  console.log('  Email: ad@presenze.it');
+  console.log('  Password: AdPassword123!');
   console.log('');
   console.log('GP (Gestore Presenze):');
   console.log('  Email: gp@presenze.it');

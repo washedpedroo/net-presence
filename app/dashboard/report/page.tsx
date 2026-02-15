@@ -16,6 +16,7 @@ interface Employee {
 }
 
 interface RecapDipendente {
+  employeeId: string;
   dipendente: string;
   oreLavorate: number;
   straordinari: number;
@@ -29,6 +30,7 @@ export default function ReportPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [recap, setRecap] = useState<RecapDipendente[]>([]);
   const [loading, setLoading] = useState(false);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchEmployees();
@@ -65,6 +67,7 @@ export default function ReportPage() {
         );
 
         recapData.push({
+          employeeId: emp.id,
           dipendente: `${emp.user.nome} ${emp.user.cognome}`,
           oreLavorate,
           straordinari,
@@ -81,22 +84,37 @@ export default function ReportPage() {
     }
   };
 
+  const handleExportPDF = async (employeeId: string, nomeDipendente: string) => {
+    setDownloadingId(employeeId);
+    try {
+      const res = await fetch(
+        `/api/reports/pdf?employeeId=${employeeId}&anno=${anno}&mese=${mese}`
+      );
+      if (!res.ok) {
+        const err = await res.json();
+        alert(`Errore: ${err.error}`);
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `presenze_${nomeDipendente.replace(" ", "_").toLowerCase()}_${anno}_${mese.toString().padStart(2, "0")}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      alert("Errore durante il download del PDF");
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
   const totaleOre = recap.reduce((acc, r) => acc + r.oreLavorate, 0);
   const totaleStraordinari = recap.reduce((acc, r) => acc + r.straordinari, 0);
 
   const mesiNomi = [
-    "Gennaio",
-    "Febbraio",
-    "Marzo",
-    "Aprile",
-    "Maggio",
-    "Giugno",
-    "Luglio",
-    "Agosto",
-    "Settembre",
-    "Ottobre",
-    "Novembre",
-    "Dicembre",
+    "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
+    "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre",
   ];
 
   return (
@@ -213,10 +231,6 @@ export default function ReportPage() {
                     Riepilogo presenze per dipendente
                   </CardDescription>
                 </div>
-                <Button variant="outline" disabled>
-                  <Download className="mr-2 h-4 w-4" />
-                  Export PDF (coming soon)
-                </Button>
               </div>
             </CardHeader>
             <CardContent>
@@ -228,6 +242,7 @@ export default function ReportPage() {
                     <TableHead className="text-right">Ore Lavorate</TableHead>
                     <TableHead className="text-right">Straordinari</TableHead>
                     <TableHead className="text-right">Media Ore/Giorno</TableHead>
+                    <TableHead className="text-right">PDF</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -251,11 +266,25 @@ export default function ReportPage() {
                           : "0.00"}
                         h
                       </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleExportPDF(r.employeeId, r.dipendente)}
+                          disabled={downloadingId === r.employeeId}
+                        >
+                          {downloadingId === r.employeeId ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Download className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))}
                   {recap.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center text-gray-500">
+                      <TableCell colSpan={6} className="text-center text-gray-500">
                         Nessun dato disponibile
                       </TableCell>
                     </TableRow>

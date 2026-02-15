@@ -3,15 +3,17 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { 
-  Home, 
-  Users, 
-  Calendar, 
-  FileText, 
-  Settings, 
+import {
+  Home,
+  Users,
+  Calendar,
+  FileText,
+  Settings,
   LogOut,
-  Clock
+  Clock,
+  LayoutTemplate,
 } from "lucide-react";
+import { NotificationBell } from "@/components/notification-bell";
 
 interface SidebarProps {
   user: {
@@ -25,13 +27,14 @@ export function Sidebar({ user }: SidebarProps) {
   const pathname = usePathname();
 
   const navigation = [
-    { name: "Dashboard", href: "/dashboard", icon: Home, roles: ["ADMIN", "GP", "DIPENDENTE"] },
+    { name: "Dashboard", href: "/dashboard", icon: Home, roles: ["ADMIN", "AD", "GP", "DIPENDENTE"] },
     { name: "Utenti", href: "/dashboard/users", icon: Users, roles: ["ADMIN"] },
     { name: "Dipendenti", href: "/dashboard/employees", icon: Users, roles: ["ADMIN", "GP"] },
-    { name: "Timbrature", href: "/dashboard/timbrature", icon: Clock, roles: ["ADMIN", "GP"] },
-    { name: "Giustificativi", href: "/dashboard/giustificativi", icon: FileText, roles: ["ADMIN", "GP", "DIPENDENTE"] },
+    { name: "Timbrature", href: "/dashboard/timbrature", icon: Clock, roles: ["ADMIN", "AD", "GP"] },
+    { name: "Giustificativi", href: "/dashboard/giustificativi", icon: FileText, roles: ["ADMIN", "AD", "GP", "DIPENDENTE"] },
     { name: "Le Mie Presenze", href: "/dashboard/mie-presenze", icon: Calendar, roles: ["DIPENDENTE"] },
-    { name: "Report", href: "/dashboard/report", icon: FileText, roles: ["ADMIN", "GP"] },
+    { name: "Template Orari", href: "/dashboard/templates", icon: LayoutTemplate, roles: ["ADMIN", "GP"] },
+    { name: "Report", href: "/dashboard/report", icon: FileText, roles: ["ADMIN", "AD", "GP"] },
     { name: "Configurazioni", href: "/dashboard/configurazioni", icon: Settings, roles: ["ADMIN"] },
   ];
 
@@ -39,18 +42,29 @@ export function Sidebar({ user }: SidebarProps) {
     item.roles.includes(user.role || "")
   );
 
+  const getRoleLabel = (role?: string) => {
+    switch (role) {
+      case "ADMIN": return "Amministratore";
+      case "AD": return "Amm. Delegato";
+      case "GP": return "Gestore Presenze";
+      case "DIPENDENTE": return "Dipendente";
+      default: return role || "";
+    }
+  };
+
   return (
     <div className="flex flex-col w-64 bg-gray-800">
-      <div className="flex items-center justify-center h-16 bg-gray-900">
-        <h1 className="text-white text-xl font-bold">Gestione Presenze</h1>
+      <div className="flex items-center justify-between h-16 bg-gray-900 px-4">
+        <h1 className="text-white text-base font-bold">Gestione Presenze</h1>
+        <NotificationBell />
       </div>
-      
+
       <div className="flex-1 overflow-y-auto">
-        <nav className="px-2 py-4 space-y-2">
+        <nav className="px-2 py-4 space-y-1">
           {filteredNav.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
-            
+
             return (
               <Link
                 key={item.name}
@@ -77,7 +91,7 @@ export function Sidebar({ user }: SidebarProps) {
             </p>
             <p className="text-xs text-gray-400 truncate">{user.email}</p>
             <p className="text-xs text-gray-500 mt-1">
-              Ruolo: {user.role === "ADMIN" ? "Amministratore" : user.role === "GP" ? "Gestore Presenze" : "Dipendente"}
+              {getRoleLabel(user.role)}
             </p>
           </div>
         </div>

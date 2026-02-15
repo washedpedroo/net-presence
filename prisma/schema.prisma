@@ -11,7 +11,8 @@ datasource db {
 }
 
 enum UserRole {
-  ADMIN       // AD - Amministratore
+  ADMIN       // Amministratore sistema
+  AD          // Amministratore Delegato - approva timbrature e giustificativi
   GP          // GP - Gestore Presenze
   DIPENDENTE  // Dipendente
 }
@@ -50,7 +51,8 @@ model User {
 
   employee      Employee?
   auditLogs     AuditLog[]
-  
+  notifiche     Notifica[]
+
   @@index([email])
   @@map("users")
 }
@@ -60,7 +62,6 @@ model Employee {
   userId            String    @unique
   user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   
-  codiceFiscale     String    @unique
   dataNascita       DateTime
   luogoNascita      String
   indirizzo         String
@@ -84,22 +85,36 @@ model EmployeeTemplate {
   id          String    @id @default(cuid())
   employeeId  String    @unique
   employee    Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  
-  // Orari standard settimanali
-  lunediInizio      String?   // formato "HH:MM"
-  lunediFine        String?
-  martediInizio     String?
-  martediFine       String?
-  mercolediInizio   String?
-  mercolediFine     String?
-  giovediInizio     String?
-  giovediFine       String?
-  venerdiInizio     String?
-  venerdiFine       String?
-  
+
+  // Orari standard settimanali - 4 slot per giorno (entrata mattina / uscita mattina / entrata pomeriggio / uscita pomeriggio)
+  lunediEntrata1    String?   // formato "HH:MM"
+  lunediUscita1     String?
+  lunediEntrata2    String?
+  lunediUscita2     String?
+
+  martediEntrata1   String?
+  martediUscita1    String?
+  martediEntrata2   String?
+  martediUscita2    String?
+
+  mercolediEntrata1 String?
+  mercolediUscita1  String?
+  mercolediEntrata2 String?
+  mercolediUscita2  String?
+
+  giovediEntrata1   String?
+  giovediUscita1    String?
+  giovediEntrata2   String?
+  giovediUscita2    String?
+
+  venerdiEntrata1   String?
+  venerdiUscita1    String?
+  venerdiEntrata2   String?
+  venerdiUscita2    String?
+
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-  
+
   @@map("employee_templates")
 }
 
@@ -234,6 +249,25 @@ model Configuration {
   updatedAt   DateTime  @updatedAt
   
   @@map("configurations")
+}
+
+model Notifica {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  tipo        String   // es: "GIUSTIFICATIVO_RICHIESTO", "GIUSTIFICATIVO_APPROVATO", "TIMBRATURA_CONFERMATA", ecc.
+  titolo      String
+  messaggio   String
+  letta       Boolean  @default(false)
+  entitaId    String?
+  entitaTipo  String?  // "Giustificativo" | "Timbratura"
+
+  createdAt   DateTime @default(now())
+
+  @@index([userId, letta])
+  @@index([userId, createdAt])
+  @@map("notifiche")
 }
 
 model AuditLog {

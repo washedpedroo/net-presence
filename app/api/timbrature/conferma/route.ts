@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { creaNotifica } from "@/lib/notifiche";
 
 // POST - Conferma timbrature di un dipendente per un mese
 export async function POST(request: NextRequest) {
@@ -11,10 +12,10 @@ export async function POST(request: NextRequest) {
     }
 
     const user = await prisma.user.findUnique({
-      where: { id: session.user.id }
+      where: { id: session.user.id },
     });
 
-    if (!user || user.ruolo === "DIPENDENTE") {
+    if (!user || (user.ruolo !== "GP" && user.ruolo !== "ADMIN")) {
       return NextResponse.json(
         { error: "Non autorizzato. Solo GP e ADMIN possono confermare" },
         { status: 403 }
@@ -24,10 +25,7 @@ export async function POST(request: NextRequest) {
     const { employeeId, anno, mese } = await request.json();
 
     if (!employeeId || !anno || !mese) {
-      return NextResponse.json(
-        { error: "Parametri mancanti" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Parametri mancanti" }, { status: 400 });
     }
 
     // Aggiorna tutte le timbrature del dipendente per quel mese
@@ -36,12 +34,12 @@ export async function POST(request: NextRequest) {
         employeeId,
         anno: parseInt(anno),
         mese: parseInt(mese),
-        stato: "BOZZA"
+        stato: "BOZZA",
       },
       data: {
         stato: "CONFERMATO_GP",
         confermatoGpAt: new Date(),
-      }
+      },
     });
 
     await prisma.auditLog.create({
@@ -50,13 +48,35 @@ export async function POST(request: NextRequest) {
         azione: "CONFERMA_TIMBRATURE_GP",
         entita: "Timbratura",
         dettagli: JSON.stringify({ employeeId, anno, mese, count: result.count }),
-      }
+      },
     });
+
+    // Notifica al dipendente
+    const employee = await prisma.employee.findUnique({
+      where: { id: employeeId },
+      include: { user: { select: { id: true } } },
+    });
+
+    if (employee) {
+      const meseNome = new Date(parseInt(anno), parseInt(mese) - 1).toLocaleDateString("it-IT", {
+        month: "long",
+        year: "numeric",
+      });
+
+      await creaNotifica(
+        employee.user.id,
+        "TIMBRATURA_CONFERMATA",
+        `Presenze ${meseNome} confermate`,
+        `Le tue presenze di ${meseNome} sono state confermate dal GP. Saranno presto inviate all'AD per approvazione.`,
+        employeeId,
+        "Timbratura"
+      );
+    }
 
     return NextResponse.json({
       success: true,
       message: `${result.count} timbrature confermate`,
-      count: result.count
+      count: result.count,
     });
   } catch (error) {
     console.error("Errore conferma timbrature:", error);

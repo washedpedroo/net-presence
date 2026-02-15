@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { feriSchema, permessoSchema } from "@/lib/validations";
+import { creaNotificaPerRuolo } from "@/lib/notifiche";
 
 // GET - Ottieni giustificativi
 export async function GET(request: NextRequest) {
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest) {
 
     // Filtro per dipendente
     if (employeeId) {
-      // Solo GP e ADMIN possono vedere giustificativi di altri
+      // Solo GP, AD e ADMIN possono vedere giustificativi di altri
       if (user.ruolo === "DIPENDENTE" && user.employee?.id !== employeeId) {
         return NextResponse.json({ error: "Non autorizzato" }, { status: 403 });
       }
@@ -37,6 +38,7 @@ export async function GET(request: NextRequest) {
       // Se dipendente, vede solo i suoi
       where.employeeId = user.employee?.id;
     }
+    // AD vede tutto (per approvazione): nessun filtro employee aggiuntivo
 
     // Filtro per stato
     if (stato) {
@@ -162,6 +164,18 @@ export async function POST(request: NextRequest) {
         dettagli: JSON.stringify({ tipo: validated.tipo, oreTotali }),
       }
     });
+
+    // Notifica AD della nuova richiesta
+    const tipoLabel = validated.tipo === "FERIE" ? "Ferie" : validated.tipo === "PERMESSO" ? "Permesso" : "Ex Festività";
+    const dipNome = `${user.nome} ${user.cognome}`;
+    await creaNotificaPerRuolo(
+      "AD",
+      "GIUSTIFICATIVO_RICHIESTO",
+      `Nuova richiesta ${tipoLabel}`,
+      `${dipNome} ha richiesto ${tipoLabel.toLowerCase()} (${oreTotali} ore).`,
+      giustificativo.id,
+      "Giustificativo"
+    );
 
     return NextResponse.json(giustificativo, { status: 201 });
   } catch (error: any) {

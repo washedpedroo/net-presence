@@ -1,22 +1,77 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Settings, Save } from "lucide-react";
+import { Settings, Save, Loader2, CheckCircle } from "lucide-react";
 
 export default function ConfigurazioniPage() {
   const [config, setConfig] = useState({
-    oreStandard: "8",
-    tolleranzaMinuti: "10",
-    sessioni: "8",
+    ORE_STANDARD: "8",
+    TOLLERANZA_MINUTI: "10",
+    SESSION_TIMEOUT_ORE: "8",
   });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleSave = () => {
-    alert("Configurazioni salvate! (Funzionalità da implementare)");
+  useEffect(() => {
+    fetchConfig();
+  }, []);
+
+  const fetchConfig = async () => {
+    try {
+      const res = await fetch("/api/configurazioni");
+      if (res.ok) {
+        const data = await res.json();
+        setConfig((prev) => ({
+          ORE_STANDARD: data.ORE_STANDARD ?? prev.ORE_STANDARD,
+          TOLLERANZA_MINUTI: data.TOLLERANZA_MINUTI ?? prev.TOLLERANZA_MINUTI,
+          SESSION_TIMEOUT_ORE: data.SESSION_TIMEOUT_ORE ?? prev.SESSION_TIMEOUT_ORE,
+        }));
+      }
+    } catch {
+      setError("Errore nel caricamento delle configurazioni");
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const handleSave = async () => {
+    setSaving(true);
+    setError("");
+    setSaved(false);
+    try {
+      const res = await fetch("/api/configurazioni", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(config),
+      });
+
+      if (res.ok) {
+        setSaved(true);
+        setTimeout(() => setSaved(false), 3000);
+      } else {
+        const data = await res.json();
+        setError(data.error || "Errore nel salvataggio");
+      }
+    } catch {
+      setError("Errore di rete");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -43,9 +98,11 @@ export default function ConfigurazioniPage() {
             <Input
               id="oreStandard"
               type="number"
-              value={config.oreStandard}
+              min="1"
+              max="24"
+              value={config.ORE_STANDARD}
               onChange={(e) =>
-                setConfig({ ...config, oreStandard: e.target.value })
+                setConfig({ ...config, ORE_STANDARD: e.target.value })
               }
               className="max-w-xs"
             />
@@ -59,15 +116,16 @@ export default function ConfigurazioniPage() {
             <Input
               id="tolleranza"
               type="number"
-              value={config.tolleranzaMinuti}
+              min="0"
+              max="60"
+              value={config.TOLLERANZA_MINUTI}
               onChange={(e) =>
-                setConfig({ ...config, tolleranzaMinuti: e.target.value })
+                setConfig({ ...config, TOLLERANZA_MINUTI: e.target.value })
               }
               className="max-w-xs"
             />
             <p className="text-sm text-gray-500 mt-1">
-              Tolleranza in minuti per il calcolo degli straordinari (default: ±10
-              min)
+              Tolleranza in minuti per il calcolo degli straordinari (default: ±10 min)
             </p>
           </div>
 
@@ -76,9 +134,11 @@ export default function ConfigurazioniPage() {
             <Input
               id="sessioni"
               type="number"
-              value={config.sessioni}
+              min="1"
+              max="24"
+              value={config.SESSION_TIMEOUT_ORE}
               onChange={(e) =>
-                setConfig({ ...config, sessioni: e.target.value })
+                setConfig({ ...config, SESSION_TIMEOUT_ORE: e.target.value })
               }
               className="max-w-xs"
             />
@@ -87,9 +147,31 @@ export default function ConfigurazioniPage() {
             </p>
           </div>
 
-          <Button onClick={handleSave} className="mt-4">
-            <Save className="mr-2 h-4 w-4" />
-            Salva Configurazioni
+          {error && (
+            <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md p-3">
+              {error}
+            </div>
+          )}
+
+          {saved && (
+            <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 border border-green-200 rounded-md p-3">
+              <CheckCircle className="h-4 w-4" />
+              Configurazioni salvate con successo!
+            </div>
+          )}
+
+          <Button onClick={handleSave} disabled={saving} className="mt-2">
+            {saving ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Salvataggio...
+              </>
+            ) : (
+              <>
+                <Save className="mr-2 h-4 w-4" />
+                Salva Configurazioni
+              </>
+            )}
           </Button>
         </CardContent>
       </Card>
@@ -108,7 +190,7 @@ export default function ConfigurazioniPage() {
               <li>1 Gennaio - Capodanno</li>
               <li>6 Gennaio - Epifania</li>
               <li>5 Aprile - Pasqua</li>
-              <li>6 Aprile - Lunedì dell'Angelo</li>
+              <li>6 Aprile - Lunedì dell&apos;Angelo</li>
               <li>25 Aprile - Festa della Liberazione</li>
               <li>1 Maggio - Festa del Lavoro</li>
               <li>2 Giugno - Festa della Repubblica</li>
@@ -151,63 +233,13 @@ export default function ConfigurazioniPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-2 text-sm">
-            <p className="font-medium">Funzionalità Implementate:</p>
+            <p className="font-medium">Funzionalità:</p>
             <ul className="list-disc list-inside space-y-1 text-gray-600">
               <li>✓ Audit log completo di tutte le azioni</li>
               <li>✓ Tracking IP e user-agent</li>
-              <li>✓ Dati sensibili con crittografia at-rest</li>
-              <li>✓ Export dati personali dipendente</li>
-              <li>○ Diritto all'oblio (anonimizzazione) - Da implementare</li>
-              <li>○ Cookie banner e consensi - Da implementare</li>
+              <li>✓ Export dati personali dipendente (GDPR ZIP)</li>
+              <li>✓ Versioning timbrature con log modifiche</li>
             </ul>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Backup & Monitoraggio</CardTitle>
-          <CardDescription>
-            Configurazioni backup e alerting
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div>
-              <p className="font-medium text-sm mb-2">Stato Sistema:</p>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div className="border rounded-lg p-3">
-                  <div className="text-gray-600">Database</div>
-                  <div className="font-semibold text-green-600">✓ Operativo</div>
-                </div>
-                <div className="border rounded-lg p-3">
-                  <div className="text-gray-600">API</div>
-                  <div className="font-semibold text-green-600">✓ Operativo</div>
-                </div>
-                <div className="border rounded-lg p-3">
-                  <div className="text-gray-600">Backup Automatico</div>
-                  <div className="font-semibold text-orange-600">
-                    ○ Non Configurato
-                  </div>
-                </div>
-                <div className="border rounded-lg p-3">
-                  <div className="text-gray-600">Monitoring</div>
-                  <div className="font-semibold text-orange-600">
-                    ○ Non Configurato
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="text-sm text-gray-600">
-              <p className="font-medium mb-2">Raccomandazioni:</p>
-              <ul className="list-disc list-inside space-y-1">
-                <li>Configurare backup automatico giornaliero del database</li>
-                <li>Implementare monitoring con Sentry/Datadog</li>
-                <li>Configurare alert per errori critici</li>
-                <li>Setup environment staging per test</li>
-              </ul>
-            </div>
           </div>
         </CardContent>
       </Card>
@@ -220,15 +252,11 @@ export default function ConfigurazioniPage() {
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-gray-600">Versione:</span>
-              <span className="font-medium">1.0.0</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Build:</span>
-              <span className="font-medium">Production</span>
+              <span className="font-medium">1.1.0</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-600">Framework:</span>
-              <span className="font-medium">Next.js 14 + React 18</span>
+              <span className="font-medium">Next.js 16 + React 18</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-600">Database:</span>

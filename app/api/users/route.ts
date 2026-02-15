@@ -98,7 +98,6 @@ export async function POST(request: NextRequest) {
       await prisma.employee.create({
         data: {
           userId: user.id,
-          codiceFiscale: validated.codiceFiscale!,
           dataNascita: new Date(validated.dataNascita!),
           luogoNascita: validated.luogoNascita!,
           indirizzo: validated.indirizzo!,

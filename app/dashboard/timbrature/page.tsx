@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { CalendarioMensile } from "@/components/calendario-mensile";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Save, Check, Send } from "lucide-react";
+import { Loader2, Save, Check, Send, Calendar } from "lucide-react";
 
 interface Employee {
   id: string;
@@ -256,6 +256,51 @@ export default function TimbratarePage() {
     }
   };
 
+  const handleCaricaTemplate = async () => {
+    if (!selectedDay || !selectedEmployee) {
+      alert("Seleziona un dipendente e un giorno prima di caricare il template");
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/templates?employeeId=${selectedEmployee}`);
+      if (!res.ok) {
+        alert("Template non trovato per questo dipendente");
+        return;
+      }
+      const tmpl = await res.json();
+      if (!tmpl || Object.keys(tmpl).length === 0) {
+        alert("Nessun template configurato per questo dipendente");
+        return;
+      }
+
+      const GIORNO_MAP: Record<number, string> = {
+        1: "lunedi",
+        2: "martedi",
+        3: "mercoledi",
+        4: "giovedi",
+        5: "venerdi",
+      };
+
+      const dayOfWeek = selectedDay.getDay(); // 0=dom, 1=lun, ...
+      const giornoKey = GIORNO_MAP[dayOfWeek];
+      if (!giornoKey) {
+        alert("Il giorno selezionato è un weekend, il template non si applica");
+        return;
+      }
+
+      setFormData((prev) => ({
+        ...prev,
+        entrata1: tmpl[`${giornoKey}Entrata1`] ?? "",
+        uscita1: tmpl[`${giornoKey}Uscita1`] ?? "",
+        entrata2: tmpl[`${giornoKey}Entrata2`] ?? "",
+        uscita2: tmpl[`${giornoKey}Uscita2`] ?? "",
+      }));
+    } catch {
+      alert("Errore durante il caricamento del template");
+    }
+  };
+
   const handleInvia = async () => {
     if (!confirm("Inviare tutte le presenze all'AD per approvazione?")) {
       return;
@@ -329,7 +374,7 @@ export default function TimbratarePage() {
             />
           )}
 
-          <div className="mt-4 flex gap-2">
+          <div className="mt-4 flex gap-2 flex-wrap">
             <Button onClick={handleConferma} variant="outline">
               <Check className="mr-2 h-4 w-4" />
               Conferma Dipendente
@@ -355,6 +400,16 @@ export default function TimbratarePage() {
           <CardContent className="space-y-4">
             {selectedDay ? (
               <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCaricaTemplate}
+                  className="w-full text-blue-600 border-blue-200 hover:bg-blue-50"
+                >
+                  <Calendar className="mr-2 h-4 w-4" />
+                  Carica Orari da Template
+                </Button>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="entrata1">Entrata 1</Label>

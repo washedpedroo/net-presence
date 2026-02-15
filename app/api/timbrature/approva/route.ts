@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { creaNotificaPerRuolo } from "@/lib/notifiche";
 
-// POST - Approva o rigetta presenze mensili (solo ADMIN)
+// POST - Approva o rigetta presenze mensili (solo AD e ADMIN)
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
@@ -11,12 +12,12 @@ export async function POST(request: NextRequest) {
     }
 
     const user = await prisma.user.findUnique({
-      where: { id: session.user.id }
+      where: { id: session.user.id },
     });
 
-    if (!user || user.ruolo !== "ADMIN") {
+    if (!user || (user.ruolo !== "AD" && user.ruolo !== "ADMIN")) {
       return NextResponse.json(
-        { error: "Non autorizzato. Solo ADMIN" },
+        { error: "Non autorizzato. Solo AD e ADMIN possono approvare le presenze" },
         { status: 403 }
       );
     }
@@ -24,17 +25,11 @@ export async function POST(request: NextRequest) {
     const { anno, mese, azione, motivazione } = await request.json();
 
     if (!anno || !mese || !azione) {
-      return NextResponse.json(
-        { error: "Parametri mancanti" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Parametri mancanti" }, { status: 400 });
     }
 
     if (!["APPROVA", "RIGETTA"].includes(azione)) {
-      return NextResponse.json(
-        { error: "Azione non valida" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Azione non valida" }, { status: 400 });
     }
 
     if (azione === "RIGETTA" && !motivazione) {
@@ -51,13 +46,13 @@ export async function POST(request: NextRequest) {
       where: {
         anno: parseInt(anno),
         mese: parseInt(mese),
-        stato: "INVIATO_AD"
+        stato: "INVIATO_AD",
       },
       data: {
         stato: nuovoStato,
         [dataField]: new Date(),
-        ...(azione === "RIGETTA" && { motivazioneRigetto: motivazione })
-      }
+        ...(azione === "RIGETTA" && { motivazioneRigetto: motivazione }),
+      },
     });
 
     await prisma.auditLog.create({
@@ -66,19 +61,41 @@ export async function POST(request: NextRequest) {
         azione: `${azione}_PRESENZE_AD`,
         entita: "Timbratura",
         dettagli: JSON.stringify({ anno, mese, count: result.count, motivazione }),
-      }
+      },
     });
+
+    const meseNome = new Date(parseInt(anno), parseInt(mese) - 1).toLocaleDateString("it-IT", {
+      month: "long",
+      year: "numeric",
+    });
+
+    // Notifica GP
+    await creaNotificaPerRuolo(
+      "GP",
+      azione === "APPROVA" ? "PRESENZE_APPROVATE" : "PRESENZE_RIFIUTATE",
+      azione === "APPROVA" ? `Presenze ${meseNome} approvate` : `Presenze ${meseNome} rigettate`,
+      azione === "APPROVA"
+        ? `Le presenze di ${meseNome} sono state approvate dall'AD. Mese chiuso.`
+        : `Le presenze di ${meseNome} sono state rigettate. Motivazione: ${motivazione}. Correggere e reinviare.`
+    );
+
+    // Notifica tutti i dipendenti
+    await creaNotificaPerRuolo(
+      "DIPENDENTE",
+      azione === "APPROVA" ? "PRESENZE_APPROVATE" : "PRESENZE_RIFIUTATE",
+      azione === "APPROVA" ? `Presenze ${meseNome} approvate` : `Presenze ${meseNome} in revisione`,
+      azione === "APPROVA"
+        ? `Le presenze di ${meseNome} sono state approvate dall'AD.`
+        : `Le presenze di ${meseNome} sono in fase di revisione da parte del GP.`
+    );
 
     return NextResponse.json({
       success: true,
       message: `Presenze ${azione === "APPROVA" ? "approvate" : "rigettate"}`,
-      count: result.count
+      count: result.count,
     });
   } catch (error) {
     console.error("Errore approvazione AD:", error);
-    return NextResponse.json(
-      { error: "Errore nell'approvazione" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Errore nell'approvazione" }, { status: 500 });
   }
 }

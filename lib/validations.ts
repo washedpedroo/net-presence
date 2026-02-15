@@ -60,10 +60,9 @@ export const createUserSchema = z.object({
   password: z.string().min(12, "La password deve essere di almeno 12 caratteri"),
   nome: z.string().min(2, "Nome obbligatorio"),
   cognome: z.string().min(2, "Cognome obbligatorio"),
-  ruolo: z.enum(["ADMIN", "GP", "DIPENDENTE"]),
-  
-  // Dati dipendente (opzionali se ADMIN o GP)
-  codiceFiscale: z.string().optional(),
+  ruolo: z.enum(["ADMIN", "AD", "GP", "DIPENDENTE"]),
+
+  // Dati dipendente (opzionali se non DIPENDENTE)
   dataNascita: z.string().or(z.date()).optional(),
   luogoNascita: z.string().optional(),
   indirizzo: z.string().optional(),
@@ -75,7 +74,6 @@ export const createUserSchema = z.object({
   // Se DIPENDENTE, i dati anagrafici sono obbligatori
   if (data.ruolo === "DIPENDENTE") {
     return !!(
-      data.codiceFiscale &&
       data.dataNascita &&
       data.luogoNascita &&
       data.indirizzo &&

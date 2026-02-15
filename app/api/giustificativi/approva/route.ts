@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { creaNotifica, creaNotificaPerRuolo } from "@/lib/notifiche";
 
-// POST - Approva o rigetta giustificativo (solo ADMIN)
+// POST - Approva o rigetta giustificativo (solo AD e ADMIN)
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
@@ -11,12 +12,12 @@ export async function POST(request: NextRequest) {
     }
 
     const user = await prisma.user.findUnique({
-      where: { id: session.user.id }
+      where: { id: session.user.id },
     });
 
-    if (!user || user.ruolo !== "ADMIN") {
+    if (!user || (user.ruolo !== "AD" && user.ruolo !== "ADMIN")) {
       return NextResponse.json(
-        { error: "Non autorizzato. Solo ADMIN può approvare giustificativi" },
+        { error: "Non autorizzato. Solo AD e ADMIN possono approvare giustificativi" },
         { status: 403 }
       );
     }
@@ -24,17 +25,11 @@ export async function POST(request: NextRequest) {
     const { giustificativoId, azione, motivazione } = await request.json();
 
     if (!giustificativoId || !azione) {
-      return NextResponse.json(
-        { error: "Parametri mancanti" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Parametri mancanti" }, { status: 400 });
     }
 
     if (!["APPROVA", "RIGETTA"].includes(azione)) {
-      return NextResponse.json(
-        { error: "Azione non valida" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Azione non valida" }, { status: 400 });
     }
 
     if (azione === "RIGETTA" && !motivazione) {
@@ -53,8 +48,13 @@ export async function POST(request: NextRequest) {
         stato: nuovoStato,
         [dataField]: new Date(),
         approvatoDa: session.user.id,
-        ...(azione === "RIGETTA" && { motivazioneRigetto: motivazione })
-      }
+        ...(azione === "RIGETTA" && { motivazioneRigetto: motivazione }),
+      },
+      include: {
+        employee: {
+          include: { user: { select: { id: true, nome: true, cognome: true } } },
+        },
+      },
     });
 
     // Crea timeline entry
@@ -62,9 +62,9 @@ export async function POST(request: NextRequest) {
       data: {
         giustificativoId: giustificativo.id,
         stato: nuovoStato,
-        nota: azione === "APPROVA" ? "Approvato" : motivazione,
+        nota: azione === "APPROVA" ? "Approvato dall'AD" : `Rigettato: ${motivazione}`,
         userId: session.user.id,
-      }
+      },
     });
 
     await prisma.auditLog.create({
@@ -74,8 +74,33 @@ export async function POST(request: NextRequest) {
         entita: "Giustificativo",
         entitaId: giustificativo.id,
         dettagli: JSON.stringify({ motivazione }),
-      }
+      },
     });
+
+    const tipoGiust = giustificativo.tipo === "FERIE" ? "Ferie" : giustificativo.tipo === "PERMESSO" ? "Permesso" : "Ex Festività";
+    const dipNome = `${giustificativo.employee.user.nome} ${giustificativo.employee.user.cognome}`;
+
+    // Notifica al dipendente
+    await creaNotifica(
+      giustificativo.employee.user.id,
+      azione === "APPROVA" ? "GIUSTIFICATIVO_APPROVATO" : "GIUSTIFICATIVO_RIFIUTATO",
+      azione === "APPROVA" ? `${tipoGiust} approvata` : `${tipoGiust} rigettata`,
+      azione === "APPROVA"
+        ? `La tua richiesta di ${tipoGiust.toLowerCase()} è stata approvata.`
+        : `La tua richiesta di ${tipoGiust.toLowerCase()} è stata rigettata. Motivazione: ${motivazione}`,
+      giustificativo.id,
+      "Giustificativo"
+    );
+
+    // Notifica al GP
+    await creaNotificaPerRuolo(
+      "GP",
+      azione === "APPROVA" ? "GIUSTIFICATIVO_APPROVATO" : "GIUSTIFICATIVO_RIFIUTATO",
+      azione === "APPROVA" ? `${tipoGiust} approvata` : `${tipoGiust} rigettata`,
+      `La richiesta di ${tipoGiust.toLowerCase()} di ${dipNome} è stata ${azione === "APPROVA" ? "approvata" : "rigettata"}.`,
+      giustificativo.id,
+      "Giustificativo"
+    );
 
     return NextResponse.json(giustificativo);
   } catch (error) {
