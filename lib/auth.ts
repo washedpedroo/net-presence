@@ -10,12 +10,12 @@ export const authConfig = {
   providers: [
     Credentials({
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
+        if (!credentials?.username || !credentials?.password) {
           return null;
         }
 
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email as string },
+          where: { username: credentials.username as string },
           include: { employee: true }
         });
 

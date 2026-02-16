@@ -100,7 +100,7 @@ export async function DELETE(
         azione: "DELETE_USER",
         entita: "User",
         entitaId: id,
-        dettagli: JSON.stringify({ email: target.email, ruolo: target.ruolo }),
+        dettagli: JSON.stringify({ username: target.username, ruolo: target.ruolo }),
       },
     });
 

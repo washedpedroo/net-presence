@@ -40,7 +40,8 @@ enum StatoTimbrature {
 
 model User {
   id            String    @id @default(cuid())
-  email         String    @unique
+  username      String    @unique
+  email         String?   @unique
   passwordHash  String
   nome          String
   cognome       String
@@ -53,7 +54,7 @@ model User {
   auditLogs     AuditLog[]
   notifiche     Notifica[]
 
-  @@index([email])
+  @@index([username])
   @@map("users")
 }
 

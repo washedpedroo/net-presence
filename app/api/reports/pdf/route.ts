@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
     // Carica dati dipendente
     const employee = await prisma.employee.findUnique({
       where: { id: employeeId },
-      include: { user: { select: { nome: true, cognome: true, email: true } } },
+      include: { user: { select: { nome: true, cognome: true, username: true } } },
     });
 
     if (!employee) {
@@ -206,7 +206,7 @@ export async function GET(request: NextRequest) {
   <div class="dipendente-box">
     <h2>${employee.user.nome} ${employee.user.cognome}</h2>
     <div class="info-grid">
-      <div class="info-row"><span class="info-label">Email:</span> <span>${employee.user.email}</span></div>
+      <div class="info-row"><span class="info-label">Username:</span> <span>${employee.user.username}</span></div>
       <div class="info-row"><span class="info-label">Matricola:</span> <span>${employee.matricola ?? "—"}</span></div>
       <div class="info-row"><span class="info-label">Periodo:</span> <span>${MESI[mese - 1]} ${anno}</span></div>
       <div class="info-row"><span class="info-label">Generato:</span> <span>${dataGenerazione}</span></div>

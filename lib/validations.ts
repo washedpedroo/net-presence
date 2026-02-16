@@ -56,7 +56,6 @@ export const permessoSchema = z.object({
 
 // Schema per creazione utente
 export const createUserSchema = z.object({
-  email: z.string().email("Email non valida"),
   password: z.string().min(12, "La password deve essere di almeno 12 caratteri"),
   nome: z.string().min(2, "Nome obbligatorio"),
   cognome: z.string().min(2, "Cognome obbligatorio"),

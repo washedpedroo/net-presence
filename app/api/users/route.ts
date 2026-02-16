@@ -67,16 +67,13 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validated = createUserSchema.parse(body);
 
-    // Verifica email univoca
-    const esistente = await prisma.user.findUnique({
-      where: { email: validated.email }
-    });
-
-    if (esistente) {
-      return NextResponse.json(
-        { error: "Email già in uso" },
-        { status: 400 }
-      );
+    // Genera username univoco nel formato nome.cognome
+    const baseUsername = `${validated.nome.toLowerCase().replace(/\s+/g, "")}.${validated.cognome.toLowerCase().replace(/\s+/g, "")}`;
+    let username = baseUsername;
+    let suffix = 2;
+    while (await prisma.user.findUnique({ where: { username } })) {
+      username = `${baseUsername}${suffix}`;
+      suffix++;
     }
 
     // Hash password
@@ -85,7 +82,7 @@ export async function POST(request: NextRequest) {
     // Crea utente
     const user = await prisma.user.create({
       data: {
-        email: validated.email,
+        username,
         passwordHash,
         nome: validated.nome,
         cognome: validated.cognome,
@@ -115,7 +112,7 @@ export async function POST(request: NextRequest) {
         azione: "CREATE_USER",
         entita: "User",
         entitaId: user.id,
-        dettagli: JSON.stringify({ email: user.email, ruolo: user.ruolo }),
+        dettagli: JSON.stringify({ username: user.username, ruolo: user.ruolo }),
       }
     });
 

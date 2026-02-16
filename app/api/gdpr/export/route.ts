@@ -11,7 +11,7 @@ const MESI = [
 ];
 
 async function generaPdfRiepilogo(
-  employee: { user: { nome: string; cognome: string; email: string } },
+  employee: { user: { nome: string; cognome: string; username: string } },
   timbrature: any[],
   giustificativi: any[],
   auditLogs: any[]
@@ -41,7 +41,7 @@ async function generaPdfRiepilogo(
 <body>
   <h1>Export GDPR — Dati Personali</h1>
   <div class="meta">
-    <strong>${employee.user.nome} ${employee.user.cognome}</strong> &lt;${employee.user.email}&gt;<br>
+    <strong>${employee.user.nome} ${employee.user.cognome}</strong> (${employee.user.username})<br>
     Generato il: ${new Date().toLocaleDateString("it-IT", { day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}
   </div>
 
@@ -160,7 +160,7 @@ export async function GET(request: NextRequest) {
     // Carica dati dipendente
     const employee = await prisma.employee.findUnique({
       where: { id: employeeId },
-      include: { user: { select: { id: true, nome: true, cognome: true, email: true, createdAt: true } } },
+      include: { user: { select: { id: true, nome: true, cognome: true, username: true, createdAt: true } } },
     });
 
     if (!employee) {

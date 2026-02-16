@@ -12,7 +12,7 @@ import { UserPlus, Loader2, Trash2, PencilLine } from "lucide-react";
 
 interface User {
   id: string;
-  email: string;
+  username: string;
   nome: string;
   cognome: string;
   ruolo: string;
@@ -28,7 +28,6 @@ const RUOLI = [
 ] as const;
 
 const EMPTY_FORM = {
-  email: "",
   password: "",
   nome: "",
   cognome: "",
@@ -199,7 +198,7 @@ export default function UsersPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Nome</TableHead>
-                <TableHead>Email</TableHead>
+                <TableHead>Username</TableHead>
                 <TableHead>Ruolo</TableHead>
                 <TableHead>Stato</TableHead>
                 <TableHead>Data Creazione</TableHead>
@@ -212,7 +211,7 @@ export default function UsersPage() {
                   <TableCell className="font-medium">
                     {user.nome} {user.cognome}
                   </TableCell>
-                  <TableCell>{user.email}</TableCell>
+                  <TableCell className="font-mono text-sm">{user.username}</TableCell>
                   <TableCell>{getRoleBadge(user.ruolo)}</TableCell>
                   <TableCell>
                     <button
@@ -288,16 +287,14 @@ export default function UsersPage() {
               </div>
             </div>
 
-            <div>
-              <Label htmlFor="email">Email *</Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                required
-              />
-            </div>
+            {formData.nome && formData.cognome && (
+              <div className="rounded-md bg-blue-50 px-3 py-2 text-sm text-blue-700">
+                Username generato automaticamente:{" "}
+                <span className="font-mono font-semibold">
+                  {formData.nome.toLowerCase().replace(/\s+/g, "")}.{formData.cognome.toLowerCase().replace(/\s+/g, "")}
+                </span>
+              </div>
+            )}
 
             <div>
               <Label htmlFor="password">Password * (min 12 caratteri)</Label>
@@ -439,7 +436,7 @@ export default function UsersPage() {
           <DialogHeader>
             <DialogTitle>Cambia Ruolo</DialogTitle>
             <DialogDescription>
-              {editingUser?.nome} {editingUser?.cognome} — {editingUser?.email}
+              {editingUser?.nome} {editingUser?.cognome} — {editingUser?.username}
             </DialogDescription>
           </DialogHeader>
 
