@@ -61,29 +61,6 @@ export const createUserSchema = z.object({
   cognome: z.string().min(2, "Cognome obbligatorio"),
   ruolo: z.enum(["ADMIN", "AD", "GP", "DIPENDENTE"]),
 
-  // Dati dipendente (opzionali se non DIPENDENTE)
-  dataNascita: z.string().or(z.date()).optional(),
-  luogoNascita: z.string().optional(),
-  indirizzo: z.string().optional(),
-  citta: z.string().optional(),
-  cap: z.string().optional(),
-  telefono: z.string().optional(),
-  dataAssunzione: z.string().or(z.date()).optional(),
-}).refine((data) => {
-  // Se DIPENDENTE, i dati anagrafici sono obbligatori
-  if (data.ruolo === "DIPENDENTE") {
-    return !!(
-      data.dataNascita &&
-      data.luogoNascita &&
-      data.indirizzo &&
-      data.citta &&
-      data.cap &&
-      data.dataAssunzione
-    );
-  }
-  return true;
-}, {
-  message: "Per i dipendenti, tutti i dati anagrafici sono obbligatori"
 });
 
 // Schema per template orari

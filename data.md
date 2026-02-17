@@ -11,3 +11,12 @@ user
 ### Dipendente
 - **Email**: `dipendente@presenze.it`
 - **Password**: `DipPassword123!`
+
+user 
+### Admin
+- **Username**: `admin.finafarm`
+- **password**: `FinafarmAdminLogin987!!`
+
+##Dipendente
+- **Username**: `nicola.pedrotti`
+- **password**: `Nicola2024!!`

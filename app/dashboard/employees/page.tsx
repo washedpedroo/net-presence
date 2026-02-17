@@ -8,8 +8,6 @@ import { Loader2 } from "lucide-react";
 
 interface Employee {
   id: string;
-  dataNascita: string;
-  dataAssunzione: string;
   user: {
     id: string;
     nome: string;
@@ -120,7 +118,6 @@ export default function EmployeesPage() {
               <TableRow>
                 <TableHead>Dipendente</TableHead>
                 <TableHead>Email</TableHead>
-                <TableHead>Data Assunzione</TableHead>
                 <TableHead>Template</TableHead>
                 <TableHead>Stato</TableHead>
               </TableRow>
@@ -132,9 +129,6 @@ export default function EmployeesPage() {
                     {employee.user.nome} {employee.user.cognome}
                   </TableCell>
                   <TableCell>{employee.user.email}</TableCell>
-                  <TableCell>
-                    {new Date(employee.dataAssunzione).toLocaleDateString("it-IT")}
-                  </TableCell>
                   <TableCell>
                     {employee.template ? (
                       <Badge variant="success">Configurato</Badge>

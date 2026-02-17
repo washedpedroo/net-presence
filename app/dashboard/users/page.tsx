@@ -32,13 +32,6 @@ const EMPTY_FORM = {
   nome: "",
   cognome: "",
   ruolo: "DIPENDENTE",
-  dataNascita: "",
-  luogoNascita: "",
-  indirizzo: "",
-  citta: "",
-  cap: "",
-  telefono: "",
-  dataAssunzione: "",
 };
 
 export default function UsersPage() {
@@ -164,8 +157,6 @@ export default function UsersPage() {
       default: return <Badge>{ruolo}</Badge>;
     }
   };
-
-  const isDipendente = formData.ruolo === "DIPENDENTE";
 
   if (loading) {
     return (
@@ -322,89 +313,6 @@ export default function UsersPage() {
                 ))}
               </select>
             </div>
-
-            {isDipendente && (
-              <div className="border-t pt-4 mt-4">
-                <h3 className="font-semibold mb-4">Dati Anagrafici Dipendente</h3>
-
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="dataNascita">Data di Nascita *</Label>
-                      <Input
-                        id="dataNascita"
-                        type="date"
-                        value={formData.dataNascita}
-                        onChange={(e) => setFormData({ ...formData, dataNascita: e.target.value })}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="luogoNascita">Luogo di Nascita *</Label>
-                      <Input
-                        id="luogoNascita"
-                        value={formData.luogoNascita}
-                        onChange={(e) => setFormData({ ...formData, luogoNascita: e.target.value })}
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="indirizzo">Indirizzo *</Label>
-                    <Input
-                      id="indirizzo"
-                      value={formData.indirizzo}
-                      onChange={(e) => setFormData({ ...formData, indirizzo: e.target.value })}
-                      required
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="citta">Città *</Label>
-                      <Input
-                        id="citta"
-                        value={formData.citta}
-                        onChange={(e) => setFormData({ ...formData, citta: e.target.value })}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="cap">CAP *</Label>
-                      <Input
-                        id="cap"
-                        value={formData.cap}
-                        onChange={(e) => setFormData({ ...formData, cap: e.target.value })}
-                        required
-                        maxLength={5}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="telefono">Telefono</Label>
-                      <Input
-                        id="telefono"
-                        value={formData.telefono}
-                        onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="dataAssunzione">Data Assunzione *</Label>
-                      <Input
-                        id="dataAssunzione"
-                        type="date"
-                        value={formData.dataAssunzione}
-                        onChange={(e) => setFormData({ ...formData, dataAssunzione: e.target.value })}
-                        required
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
 
             <DialogFooter>
               <Button

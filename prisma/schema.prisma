@@ -63,14 +63,6 @@ model Employee {
   userId            String    @unique
   user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   
-  dataNascita       DateTime
-  luogoNascita      String
-  indirizzo         String
-  citta             String
-  cap               String
-  telefono          String?
-  dataAssunzione    DateTime
-  
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
