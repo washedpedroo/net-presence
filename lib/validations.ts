@@ -15,7 +15,6 @@ export const timbraturaSchema = z.object({
   uscita1: orarioSchema.optional().nullable(),
   entrata2: orarioSchema.optional().nullable(),
   uscita2: orarioSchema.optional().nullable(),
-  note: z.string().min(1, "Le note sono obbligatorie").max(500),
 }).refine((data) => {
   // Almeno un slot deve essere compilato
   return !!(data.entrata1 || data.uscita1 || data.entrata2 || data.uscita2);

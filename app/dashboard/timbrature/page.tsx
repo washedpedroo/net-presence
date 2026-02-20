@@ -5,7 +5,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { CalendarioMensile } from "@/components/calendario-mensile";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Save, Check, Send, Calendar } from "lucide-react";
@@ -27,9 +26,15 @@ interface Timbratura {
   uscita2?: string;
   oreLavorate: number;
   straordinari: number;
-  note?: string;
   stato: string;
 }
+
+const toLocalDateKey = (date: Date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+};
 
 export default function TimbratarePage() {
   const oggi = new Date();
@@ -42,12 +47,12 @@ export default function TimbratarePage() {
   const [timbraturaMap, setTimbraturaMap] = useState<Map<string, any>>(new Map());
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [savedDay, setSavedDay] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     entrata1: "",
     uscita1: "",
     entrata2: "",
     uscita2: "",
-    note: "",
   });
   const [calcoloOre, setCalcoloOre] = useState<{
     oreLavorate: number;
@@ -119,7 +124,7 @@ export default function TimbratarePage() {
   const loadTimbraturaForDay = () => {
     if (!selectedDay) return;
 
-    const dataKey = selectedDay.toISOString().split("T")[0];
+    const dataKey = toLocalDateKey(selectedDay);
     const timbratura = timbraturaMap.get(dataKey);
 
     if (timbratura) {
@@ -128,7 +133,6 @@ export default function TimbratarePage() {
         uscita1: timbratura.uscita1 || "",
         entrata2: timbratura.entrata2 || "",
         uscita2: timbratura.uscita2 || "",
-        note: timbratura.note || "",
       });
     } else {
       setFormData({
@@ -136,7 +140,6 @@ export default function TimbratarePage() {
         uscita1: "",
         entrata2: "",
         uscita2: "",
-        note: "",
       });
     }
     setCalcoloOre(null);
@@ -182,8 +185,8 @@ export default function TimbratarePage() {
   };
 
   const handleSave = async () => {
-    if (!selectedDay || !selectedEmployee || !formData.note) {
-      alert("Compila tutti i campi obbligatori (data, dipendente, note)");
+    if (!selectedDay || !selectedEmployee) {
+      alert("Seleziona data e dipendente");
       return;
     }
 
@@ -199,20 +202,22 @@ export default function TimbratarePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           employeeId: selectedEmployee,
-          data: selectedDay.toISOString().split("T")[0],
+          data: toLocalDateKey(selectedDay),
           ...formData,
         }),
       });
 
       if (res.ok) {
         alert("Timbratura salvata con successo!");
+        const key = toLocalDateKey(selectedDay);
+        setSavedDay(key);
+        setTimeout(() => setSavedDay(null), 2000);
         fetchTimbrature();
         setFormData({
           entrata1: "",
           uscita1: "",
           entrata2: "",
           uscita2: "",
-          note: "",
         });
         setSelectedDay(null);
       } else {
@@ -371,6 +376,7 @@ export default function TimbratarePage() {
               onDaySelect={setSelectedDay}
               selectedDay={selectedDay}
               timbrature={timbraturaMap}
+              savedDay={savedDay}
             />
           )}
 
@@ -460,19 +466,6 @@ export default function TimbratarePage() {
                   </div>
                 </div>
 
-                <div>
-                  <Label htmlFor="note">Note * (obbligatorio)</Label>
-                  <Textarea
-                    id="note"
-                    value={formData.note}
-                    onChange={(e) =>
-                      setFormData({ ...formData, note: e.target.value })
-                    }
-                    placeholder="Es: Lavoro in ufficio, smart working, ecc."
-                    rows={3}
-                  />
-                </div>
-
                 {calcoloOre && (
                   <div className="border rounded-lg p-4 bg-gray-50">
                     <div className="font-semibold mb-2">Riepilogo</div>
@@ -500,7 +493,7 @@ export default function TimbratarePage() {
 
                 <Button
                   onClick={handleSave}
-                  disabled={saving || !formData.note}
+                  disabled={saving}
                   className="w-full"
                 >
                   {saving ? (

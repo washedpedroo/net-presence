@@ -12,6 +12,7 @@ interface CalendarioProps {
   selectedDay?: Date | null;
   timbrature?: Map<string, any>;
   festivita?: Date[];
+  savedDay?: string | null;
 }
 
 export function CalendarioMensile({
@@ -22,6 +23,7 @@ export function CalendarioMensile({
   selectedDay,
   timbrature,
   festivita = [],
+  savedDay,
 }: CalendarioProps) {
   const mesiNomi = [
     "Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno",
@@ -100,6 +102,8 @@ export function CalendarioMensile({
       giorno === oggi.getDate() &&
       mese - 1 === oggi.getMonth() &&
       anno === oggi.getFullYear();
+    const dataKey = `${anno}-${String(mese).padStart(2, '0')}-${String(giorno).padStart(2, '0')}`;
+    const isSaved = savedDay === dataKey;
 
     giorni.push(
       <button
@@ -110,6 +114,7 @@ export function CalendarioMensile({
           ${weekend || festivo ? "bg-red-50 text-red-700" : "hover:bg-gray-100"}
           ${selected ? "ring-2 ring-blue-500 bg-blue-50" : ""}
           ${isOggi ? "font-bold border-2 border-blue-500" : ""}
+          ${isSaved ? "bg-green-100 ring-2 ring-green-400" : ""}
         `}
       >
         <div className="font-medium">{giorno}</div>

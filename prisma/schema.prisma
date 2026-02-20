@@ -128,8 +128,7 @@ model Timbratura {
   
   oreLavorate Float     @default(0)
   straordinari Float    @default(0)
-  note        String?
-  
+
   stato       StatoTimbrature @default(BOZZA)
   confermatoGpAt    DateTime?
   inviatoAdAt       DateTime?
@@ -164,8 +163,7 @@ model TimbraturaVersion {
   uscita2       String?
   oreLavorate   Float
   straordinari  Float
-  note          String?
-  
+
   modificatoDa  String
   modificatoAt  DateTime  @default(now())
   

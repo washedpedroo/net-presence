@@ -17,6 +17,17 @@ user
 - **Username**: `admin.finafarm`
 - **password**: `FinafarmAdminLogin987!!`
 
+### GP
+- **Username**: `presenze.finafarm`
+- **password**: `Finafarmpresenze!!`
+
 ##Dipendente
 - **Username**: `nicola.pedrotti`
 - **password**: `Nicola2024!!`
+
+
+
+to do
+Rimuovi campo note nelle timbrature
+Colora con uno sfondo verde quando la timbratura viene salvata
+Giorno di sfasamento

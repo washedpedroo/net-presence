@@ -17,7 +17,6 @@ interface Timbratura {
   uscita2?: string;
   oreLavorate: number;
   straordinari: number;
-  note?: string;
   stato: string;
 }
 
@@ -29,6 +28,13 @@ interface Giustificativo {
   oreTotali?: number;
   stato: string;
 }
+
+const toLocalDateKey = (date: Date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+};
 
 export default function MiePresenzePage() {
   const { data: session } = useSession();
@@ -112,7 +118,7 @@ export default function MiePresenzePage() {
   const totaleOre = timbrature.reduce((acc, t) => acc + t.oreLavorate, 0);
   const totaleStraordinari = timbrature.reduce((acc, t) => acc + t.straordinari, 0);
   const selectedTimbratura = selectedDay
-    ? timbraturaMap.get(selectedDay.toISOString().split("T")[0])
+    ? timbraturaMap.get(toLocalDateKey(selectedDay))
     : null;
 
   const getStatoBadge = (stato: string) => {
@@ -272,12 +278,6 @@ export default function MiePresenzePage() {
                   </div>
                 </div>
 
-                {selectedTimbratura.note && (
-                  <div className="border-t pt-4">
-                    <div className="text-sm font-medium text-gray-600 mb-1">Note:</div>
-                    <div className="text-sm text-gray-700">{selectedTimbratura.note}</div>
-                  </div>
-                )}
               </div>
             ) : selectedDay ? (
               <div className="text-center text-gray-500 py-8">

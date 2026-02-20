@@ -103,8 +103,17 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
 
+    // Converti stringhe vuote in null per i campi opzionali
+    const sanitized = {
+      ...body,
+      entrata1: body.entrata1 || null,
+      uscita1: body.uscita1 || null,
+      entrata2: body.entrata2 || null,
+      uscita2: body.uscita2 || null,
+    };
+
     // Validazione
-    const validated = timbraturaSchema.parse(body);
+    const validated = timbraturaSchema.parse(sanitized);
 
     // Calcola ore e straordinari
     const calcolo = calcolaOreLavorate(
@@ -149,7 +158,6 @@ export async function POST(request: NextRequest) {
           uscita2: esistente.uscita2,
           oreLavorate: esistente.oreLavorate,
           straordinari: esistente.straordinari,
-          note: esistente.note,
           modificatoDa: session.user.id,
         }
       });
@@ -163,7 +171,6 @@ export async function POST(request: NextRequest) {
           uscita2: validated.uscita2,
           oreLavorate: calcolo.oreLavorate,
           straordinari: calcolo.straordinari,
-          note: validated.note,
           versione: esistente.versione + 1,
           updatedBy: session.user.id,
         }
@@ -192,7 +199,6 @@ export async function POST(request: NextRequest) {
           uscita2: validated.uscita2,
           oreLavorate: calcolo.oreLavorate,
           straordinari: calcolo.straordinari,
-          note: validated.note,
           createdBy: session.user.id,
         }
       });
