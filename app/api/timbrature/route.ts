@@ -144,6 +144,13 @@ export async function POST(request: NextRequest) {
       }
     });
 
+    if (esistente?.bloccato && user.ruolo !== "ADMIN") {
+      return NextResponse.json(
+        { error: "Timbratura bloccata dall'AD. Contatta un amministratore per sbloccarla." },
+        { status: 403 }
+      );
+    }
+
     let timbratura;
 
     if (esistente) {

@@ -135,7 +135,10 @@ model Timbratura {
   approvatoAt       DateTime?
   rigettatoAt       DateTime?
   motivazioneRigetto String?
-  
+
+  bloccato      Boolean   @default(false)
+  bloccatoAt    DateTime?
+
   versione    Int       @default(1)
   
   createdAt   DateTime  @default(now())

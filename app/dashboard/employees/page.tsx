@@ -41,7 +41,7 @@ export default function EmployeesPage() {
     try {
       const res = await fetch("/api/employees");
       const data = await res.json();
-      setEmployees(data);
+      if (Array.isArray(data)) setEmployees(data);
     } catch (error) {
       console.error("Errore caricamento dipendenti:", error);
     } finally {

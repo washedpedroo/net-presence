@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CalendarioMensile } from "@/components/calendario-mensile";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Save, Check, Send, Calendar } from "lucide-react";
+import { Loader2, Save, Check, Send, Calendar, Lock, Unlock } from "lucide-react";
 
 interface Employee {
   id: string;
@@ -27,6 +28,7 @@ interface Timbratura {
   oreLavorate: number;
   straordinari: number;
   stato: string;
+  bloccato: boolean;
 }
 
 const toLocalDateKey = (date: Date) => {
@@ -37,6 +39,9 @@ const toLocalDateKey = (date: Date) => {
 };
 
 export default function TimbratarePage() {
+  const { data: session } = useSession();
+  const userRole = session?.user?.role;
+
   const oggi = new Date();
   const [anno, setAnno] = useState(oggi.getFullYear());
   const [mese, setMese] = useState(oggi.getMonth() + 1);
@@ -45,6 +50,7 @@ export default function TimbratarePage() {
   const [selectedEmployee, setSelectedEmployee] = useState<string>("");
   const [timbrature, setTimbrature] = useState<Timbratura[]>([]);
   const [timbraturaMap, setTimbraturaMap] = useState<Map<string, any>>(new Map());
+  const [isMeseBlocato, setIsMeseBlocato] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savedDay, setSavedDay] = useState<string | null>(null);
@@ -87,6 +93,7 @@ export default function TimbratarePage() {
     try {
       const res = await fetch("/api/employees");
       const data = await res.json();
+      if (!Array.isArray(data)) return;
       setEmployees(data);
       if (data.length > 0) {
         setSelectedEmployee(data[0].id);
@@ -114,6 +121,7 @@ export default function TimbratarePage() {
         map.set(dataKey, t);
       });
       setTimbraturaMap(map);
+      setIsMeseBlocato(data.some((t: Timbratura) => t.bloccato));
     } catch (error) {
       console.error("Errore caricamento timbrature:", error);
     } finally {
@@ -331,6 +339,56 @@ export default function TimbratarePage() {
     }
   };
 
+  const handleBlocca = async () => {
+    if (!selectedEmployee || !confirm("Confermare e bloccare le timbrature per questo dipendente? Non potranno più essere modificate.")) {
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/timbrature/blocca", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ employeeId: selectedEmployee, anno, mese }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        alert(data.message);
+        fetchTimbrature();
+      } else {
+        const error = await res.json();
+        alert(`Errore: ${error.error}`);
+      }
+    } catch (error) {
+      console.error("Errore blocco timbrature:", error);
+    }
+  };
+
+  const handleSblocca = async () => {
+    if (!selectedEmployee || !confirm("Sbloccare le timbrature per questo dipendente?")) {
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/timbrature/sblocca", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ employeeId: selectedEmployee, anno, mese }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        alert(data.message);
+        fetchTimbrature();
+      } else {
+        const error = await res.json();
+        alert(`Errore: ${error.error}`);
+      }
+    } catch (error) {
+      console.error("Errore sblocco timbrature:", error);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -380,15 +438,62 @@ export default function TimbratarePage() {
             />
           )}
 
-          <div className="mt-4 flex gap-2 flex-wrap">
-            <Button onClick={handleConferma} variant="outline">
-              <Check className="mr-2 h-4 w-4" />
-              Conferma Dipendente
-            </Button>
-            <Button onClick={handleInvia}>
-              <Send className="mr-2 h-4 w-4" />
-              Invia all'AD
-            </Button>
+          <div className="mt-4 flex gap-2 flex-wrap items-center">
+            {/* GP: bottoni esistenti, nascosti se il mese è bloccato */}
+            {userRole === "GP" && !isMeseBlocato && (
+              <>
+                <Button onClick={handleConferma} variant="outline">
+                  <Check className="mr-2 h-4 w-4" />
+                  Conferma Dipendente
+                </Button>
+                <Button onClick={handleInvia}>
+                  <Send className="mr-2 h-4 w-4" />
+                  Invia all'AD
+                </Button>
+              </>
+            )}
+
+            {/* AD: Conferma le timbrature oppure badge bloccato */}
+            {userRole === "AD" && !isMeseBlocato && (
+              <Button onClick={handleBlocca}>
+                <Lock className="mr-2 h-4 w-4" />
+                Conferma le timbrature
+              </Button>
+            )}
+            {userRole === "AD" && isMeseBlocato && (
+              <Badge variant="secondary" className="text-sm py-1 px-3">
+                <Lock className="mr-1 h-3 w-3" />
+                Timbrature confermate
+              </Badge>
+            )}
+
+            {/* ADMIN: bottoni GP + Sblocca se bloccato */}
+            {userRole === "ADMIN" && (
+              <>
+                <Button onClick={handleConferma} variant="outline">
+                  <Check className="mr-2 h-4 w-4" />
+                  Conferma Dipendente
+                </Button>
+                <Button onClick={handleInvia}>
+                  <Send className="mr-2 h-4 w-4" />
+                  Invia all'AD
+                </Button>
+                {isMeseBlocato && (
+                  <Button onClick={handleSblocca} variant="destructive">
+                    <Unlock className="mr-2 h-4 w-4" />
+                    Sblocca timbrature
+                  </Button>
+                )}
+              </>
+            )}
+
+            {/* Messaggio bloccato visibile a GP quando il mese è bloccato */}
+            {userRole === "GP" && isMeseBlocato && (
+              <Badge variant="secondary" className="text-sm py-1 px-3">
+                <Lock className="mr-1 h-3 w-3" />
+                Timbrature confermate dall'AD
+              </Badge>
+            )}
           </div>
         </div>
 
@@ -406,10 +511,17 @@ export default function TimbratarePage() {
           <CardContent className="space-y-4">
             {selectedDay ? (
               <>
+                {isMeseBlocato && userRole !== "ADMIN" && (
+                  <div className="flex items-center gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                    <Lock className="h-4 w-4 shrink-0" />
+                    Timbrature bloccate dall&apos;AD. Contatta un amministratore per modificarle.
+                  </div>
+                )}
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={handleCaricaTemplate}
+                  disabled={isMeseBlocato && userRole !== "ADMIN"}
                   className="w-full text-blue-600 border-blue-200 hover:bg-blue-50"
                 >
                   <Calendar className="mr-2 h-4 w-4" />
@@ -423,6 +535,7 @@ export default function TimbratarePage() {
                       id="entrata1"
                       type="time"
                       value={formData.entrata1}
+                      disabled={isMeseBlocato && userRole !== "ADMIN"}
                       onChange={(e) =>
                         setFormData({ ...formData, entrata1: e.target.value })
                       }
@@ -434,6 +547,7 @@ export default function TimbratarePage() {
                       id="uscita1"
                       type="time"
                       value={formData.uscita1}
+                      disabled={isMeseBlocato && userRole !== "ADMIN"}
                       onChange={(e) =>
                         setFormData({ ...formData, uscita1: e.target.value })
                       }
@@ -448,6 +562,7 @@ export default function TimbratarePage() {
                       id="entrata2"
                       type="time"
                       value={formData.entrata2}
+                      disabled={isMeseBlocato && userRole !== "ADMIN"}
                       onChange={(e) =>
                         setFormData({ ...formData, entrata2: e.target.value })
                       }
@@ -459,6 +574,7 @@ export default function TimbratarePage() {
                       id="uscita2"
                       type="time"
                       value={formData.uscita2}
+                      disabled={isMeseBlocato && userRole !== "ADMIN"}
                       onChange={(e) =>
                         setFormData({ ...formData, uscita2: e.target.value })
                       }
@@ -493,7 +609,7 @@ export default function TimbratarePage() {
 
                 <Button
                   onClick={handleSave}
-                  disabled={saving}
+                  disabled={saving || (isMeseBlocato && userRole !== "ADMIN")}
                   className="w-full"
                 >
                   {saving ? (
